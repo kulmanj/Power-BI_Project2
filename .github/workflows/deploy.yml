@@ -18,8 +18,8 @@ jobs:
     - name: Deploy to Power BI
       env:
         CLIENT_ID: ${{ secrets.CLIENT_ID }}
-        CLIENT_SECRET: ${{ secrets.PBI_CLIENT_SECRET }}
-        TENANT_ID: ${{ secrets.TENANT_ID }}
+        CLIENT_SECRET: ${{ secrets.PBI_CLIENT_SECRET}}
+        TENANT_ID: ${{ secrets.TENANT_ID}}
         WORKSPACE_ID: ${{ secrets.PBI_WORKSPACE_ID }}
       run: |
         python <<EOF
@@ -28,15 +28,15 @@ jobs:
         token_url = f"https://login.microsoftonline.com/{'${{ secrets.TENANT_ID }}'}/oauth2/v2.0/token"
         payload = {
             'grant_type': 'client_credentials',
-            'client_id': '${{ secrets.CLIENT_ID }}',
-            'client_secret': '${{ secrets.CLIENT_SECRET }}',
+            'client_id': '${{ secrets.CLIENT_ID}}',
+            'client_secret': '${{ secrets.PBI_CLIENT_SECRET}}',
             'scope': 'https://analysis.windows.net/powerbi/api/.default'
         }
         token_response = requests.post(token_url, data=payload)
         access_token = token_response.json().get("access_token")
         print("Token Status:", token_response.status_code)
         # Step 2: Upload PBIX
-        url = f"https://api.powerbi.com/v1.0/myorg/groups/{'${{ secrets.WORKSPACE_ID }}'}/imports?datasetDisplayName=Sample&nameConflict=CreateOrOverwrite"
+        url = f"https://api.powerbi.com/v1.0/myorg/groups/{'${{ secrets.PBI_WORKSPACE_ID }}'}/imports?datasetDisplayName=Sample&nameConflict=CreateOrOverwrite"
         headers = {
             "Authorization": f"Bearer {access_token}"
         }
