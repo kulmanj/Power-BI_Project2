@@ -21,12 +21,13 @@ jobs:
     - name: Install Requests
       run: pip install requests
 
-    - name: Deploy to Power BI
+    - name: Upload PBIX to Power BI
       env:
         CLIENT_ID: ${{ secrets.CLIENT_ID }}
         CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         TENANT_ID: ${{ secrets.TENANT_ID }}
         WORKSPACE_ID: ${{ secrets.WORKSPACE_ID }}
+
       run: |
         python <<EOF
         import requests
@@ -37,33 +38,32 @@ jobs:
         client_secret = os.environ["CLIENT_SECRET"]
         workspace_id = os.environ["WORKSPACE_ID"]
 
-        # Step 1: Get Token
-        token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+        # STEP 1: GET TOKEN
+        url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
 
-        payload = {
-            'grant_type': 'client_credentials',
-            'client_id': client_id,
-            'client_secret': client_secret,
-            'scope': 'https://analysis.windows.net/powerbi/api/.default'
+        data = {
+            "grant_type": "client_credentials",
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "scope": "https://analysis.windows.net/powerbi/api/.default"
         }
 
-        token_response = requests.post(token_url, data=payload)
+        token_response = requests.post(url, data=data)
         access_token = token_response.json().get("access_token")
-        print("Token Status:", token_response.status_code)
-
-        # Step 2: Upload PBIX
-        url = f"https://api.powerbi.com/v1.0/myorg/groups/{workspace_id}/imports?datasetDisplayName=Sample&nameConflict=CreateOrOverwrite"
 
         headers = {
             "Authorization": f"Bearer {access_token}"
         }
 
-        files = {
-            'file': ('Samplecopy.pbix', open('Samplecopy.pbix', 'rb'), 'application/octet-stream')
-        }
+        # STEP 2: UPLOAD PBIX
+        file_path = "Samplecopy.pbix"   # 👈 yaha file name change kar sakte ho
 
-        response = requests.post(url, headers=headers, files=files)
+        upload_url = f"https://api.powerbi.com/v1.0/myorg/groups/{workspace_id}/imports?datasetDisplayName=Samplecopy&nameConflict=CreateOrOverwrite"
 
-        print("Upload Status:", response.status_code)
-        print("Upload Response:", response.text)
+        with open(file_path, "rb") as f:
+            files = {"file": f}
+            response = requests.post(upload_url, headers=headers, files=files)
+
+        print("Status:", response.status_code)
+        print("Response:", response.text)
         EOF
