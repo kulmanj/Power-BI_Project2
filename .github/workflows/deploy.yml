@@ -27,83 +27,59 @@ jobs:
         CLIENT_SECRET: ${{ secrets.PBI_CLIENT_SECRET }}
         TENANT_ID: ${{ secrets.TENANT_ID }}
         WORKSPACE_ID: ${{ secrets.PBI_WORKSPACE_ID }}
-
-        # 👉 YEH CHANGE KAR SAKTI HO FUTURE ME
-        PBIX_FILE: Samplecopy.pbix
-        DATASET_NAME: SamplesData
-
       run: |
         python <<EOF
         import requests
         import os
 
-        print("🚀 Starting Deployment...")
+        # Read env variables
+        CLIENT_ID = os.environ["CLIENT_ID"]
+        CLIENT_SECRET = os.environ["CLIENT_SECRET"]
+        TENANT_ID = os.environ["TENANT_ID"]
+        WORKSPACE_ID = os.environ["WORKSPACE_ID"]
 
-        tenant_id = os.environ["TENANT_ID"]
-        client_id = os.environ["CLIENT_ID"]
-        client_secret = os.environ["CLIENT_SECRET"]
-        workspace_id = os.environ["WORKSPACE_ID"]
-
-        pbix_file = os.environ["PBIX_FILE"]
-        dataset_name = os.environ["DATASET_NAME"]
-
-        print("Workspace ID:", workspace_id)
-        print("PBIX File:", pbix_file)
-        print("Dataset Name:", dataset_name)
-
-        # =========================
-        # STEP 1: GET TOKEN
-        # =========================
-        token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+        # Step 1: Get Token
+        token_url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
 
         payload = {
             'grant_type': 'client_credentials',
-            'client_id': client_id,
-            'client_secret': client_secret,
+            'client_id': CLIENT_ID,
+            'client_secret': CLIENT_SECRET,
             'scope': 'https://analysis.windows.net/powerbi/api/.default'
         }
 
         token_response = requests.post(token_url, data=payload)
-
         print("Token Status:", token_response.status_code)
-        print("Token Response:", token_response.text)
 
         access_token = token_response.json().get("access_token")
 
         if not access_token:
-            print("❌ Token generation failed")
+            print("❌ Token not generated")
+            print(token_response.text)
             exit(1)
 
-        print("✅ Token Generated")
+        # Step 2: Upload PBIX
+        file_path = "Samplecopy.pbix"
 
-        # =========================
-        # STEP 2: UPLOAD PBIX
-        # =========================
-        url = f"https://api.powerbi.com/v1.0/myorg/groups/{workspace_id}/imports?datasetDisplayName={dataset_name}&nameConflict=CreateOrOverwrite"
+        url = f"https://api.powerbi.com/v1.0/myorg/groups/{WORKSPACE_ID}/imports?datasetDisplayName=Sample&nameConflict=CreateOrOverwrite"
 
         headers = {
             "Authorization": f"Bearer {access_token}"
         }
 
-        try:
-            with open(pbix_file, 'rb') as f:
-                files = {
-                    'file': (pbix_file, f, 'application/octet-stream')
-                }
+        files = {
+            'file': ('Samplecopy.pbix', open(file_path, 'rb'), 'application/octet-stream')
+        }
 
-                response = requests.post(url, headers=headers, files=files)
-
-        except FileNotFoundError:
-            print(f"❌ File not found: {pbix_file}")
-            exit(1)
+        response = requests.post(url, headers=headers, files=files)
 
         print("Upload Status:", response.status_code)
         print("Upload Response:", response.text)
 
         if response.status_code not in [200, 202]:
-            print("❌ Upload Failed")
+            print("❌ Upload failed")
             exit(1)
-
-        print("✅ Upload Successful")
+        else:
+            print("✅ Upload successful")
 
         EOF
