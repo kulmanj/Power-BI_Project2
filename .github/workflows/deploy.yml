@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -26,6 +27,8 @@ jobs:
         CLIENT_SECRET: ${{ secrets.PBI_CLIENT_SECRET }}
         TENANT_ID: ${{ secrets.TENANT_ID }}
         WORKSPACE_ID: ${{ secrets.PBI_WORKSPACE_ID }}
+
+        # 👉 YEH CHANGE KAR SAKTI HO FUTURE ME
         PBIX_FILE: Samplecopy.pbix
         DATASET_NAME: SamplesData
 
@@ -34,14 +37,23 @@ jobs:
         import requests
         import os
 
+        print("🚀 Starting Deployment...")
+
         tenant_id = os.environ["TENANT_ID"]
         client_id = os.environ["CLIENT_ID"]
         client_secret = os.environ["CLIENT_SECRET"]
         workspace_id = os.environ["WORKSPACE_ID"]
+
         pbix_file = os.environ["PBIX_FILE"]
         dataset_name = os.environ["DATASET_NAME"]
 
-        # Step 1: Get Token
+        print("Workspace ID:", workspace_id)
+        print("PBIX File:", pbix_file)
+        print("Dataset Name:", dataset_name)
+
+        # =========================
+        # STEP 1: GET TOKEN
+        # =========================
         token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
 
         payload = {
@@ -52,24 +64,46 @@ jobs:
         }
 
         token_response = requests.post(token_url, data=payload)
-        access_token = token_response.json().get("access_token")
 
         print("Token Status:", token_response.status_code)
+        print("Token Response:", token_response.text)
 
-        # Step 2: Upload PBIX
+        access_token = token_response.json().get("access_token")
+
+        if not access_token:
+            print("❌ Token generation failed")
+            exit(1)
+
+        print("✅ Token Generated")
+
+        # =========================
+        # STEP 2: UPLOAD PBIX
+        # =========================
         url = f"https://api.powerbi.com/v1.0/myorg/groups/{workspace_id}/imports?datasetDisplayName={dataset_name}&nameConflict=CreateOrOverwrite"
 
         headers = {
             "Authorization": f"Bearer {access_token}"
         }
 
-        files = {
-            'file': (pbix_file, open(pbix_file, 'rb'), 'application/octet-stream')
-        }
+        try:
+            with open(pbix_file, 'rb') as f:
+                files = {
+                    'file': (pbix_file, f, 'application/octet-stream')
+                }
 
-        response = requests.post(url, headers=headers, files=files)
+                response = requests.post(url, headers=headers, files=files)
+
+        except FileNotFoundError:
+            print(f"❌ File not found: {pbix_file}")
+            exit(1)
 
         print("Upload Status:", response.status_code)
         print("Upload Response:", response.text)
+
+        if response.status_code not in [200, 202]:
+            print("❌ Upload Failed")
+            exit(1)
+
+        print("✅ Upload Successful")
 
         EOF
