@@ -59,7 +59,7 @@ jobs:
         }
 
         files = {
-            'file': ('Sample - Copy.pbix', open('Sample - Copy.pbix', 'rb'), 'application/octet-stream')
+            'file': ('SampleCopy.pbix', open('SampleCopy.pbix', 'rb'), 'application/octet-stream')
         }
 
         response = requests.post(url, headers=headers, files=files)
